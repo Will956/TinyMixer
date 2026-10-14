@@ -19,6 +19,7 @@ final class MixerModel: ObservableObject {
         // Reacting to the process list (instead of polling) applies a saved volume as soon as an app opens audio.
         listen(kAudioHardwarePropertyProcessObjectList) { [weak self] in self?.refresh() }
         listen(kAudioHardwarePropertyDefaultOutputDevice) { [weak self] in self?.syncTaps() }
+        listen(kAudioHardwarePropertyDefaultSystemOutputDevice) { [weak self] in self?.syncTaps() }
         refresh()
     }
 
@@ -90,13 +91,17 @@ final class MixerModel: ObservableObject {
 
     /// Apps at 100% are left untouched: no tap, no added latency.
     private func syncTaps() {
-        guard let device = try? CA.defaultOutputDevice(), let deviceUID = try? CA.deviceUID(device) else { return }
+        guard let output = try? CA.defaultOutputDevice() else { return }
+        let alertOutput = (try? CA.defaultSystemOutputDevice()) ?? output
         var wanted = Set<String>()
 
         for app in apps {
             let gain = gain(for: app.id)
             guard gain < 0.999 else { continue }
             wanted.insert(app.id)
+
+            let device = app.id == AudioProcessMonitor.alertsID ? alertOutput : output
+            guard let deviceUID = try? CA.deviceUID(device) else { continue }
 
             if let tap = taps[app.id], tap.processObjectIDs == app.processObjectIDs, tap.outputDeviceUID == deviceUID {
                 tap.gain = gain
@@ -109,6 +114,7 @@ final class MixerModel: ObservableObject {
                 if lastError?.hasPrefix(app.name) == true { lastError = nil }
             } catch {
                 lastError = "\(app.name): \(error)"
+                NSLog("TinyMixer: could not control %@: %@", app.name, "\(error)")
             }
         }
 

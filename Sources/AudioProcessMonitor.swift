@@ -11,6 +11,7 @@ struct AudioApp: Identifiable, Equatable {
 }
 
 enum AudioProcessMonitor {
+    static let alertsID = "systemsoundserverd"
     private static let webKitID = "com.apple.WebKit"
 
     static func currentApps() -> [AudioApp] {
@@ -45,6 +46,10 @@ enum AudioProcessMonitor {
     /// Helpers live inside the main bundle (Slack.app/Contents/Frameworks/Slack Helper.app),
     /// so the outermost `.app` in the executable path is the app the user recognizes.
     private static func owningApp(pid: pid_t, bundleID: String) -> (id: String, name: String, path: String?)? {
+        // macOS plays every app's notification sound (and UI alerts) itself, so they can only be controlled together.
+        if bundleID == alertsID {
+            return (alertsID, "Notifications & alerts", "/System/Library/CoreServices/NotificationCenter.app")
+        }
         // Safari and other WebKit views play media from a shared system GPU process outside any .app.
         if bundleID.hasPrefix(webKitID) {
             let safari = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Safari")?.path

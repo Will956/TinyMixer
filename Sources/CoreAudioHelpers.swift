@@ -57,6 +57,11 @@ enum CA {
         try value(.system, kAudioHardwarePropertyDefaultOutputDevice, initial: AudioDeviceID.unknown)
     }
 
+    /// The "Play sound effects through" device, used for alerts and notification sounds.
+    static func defaultSystemOutputDevice() throws -> AudioDeviceID {
+        try value(.system, kAudioHardwarePropertyDefaultSystemOutputDevice, initial: AudioDeviceID.unknown)
+    }
+
     static func deviceUID(_ device: AudioDeviceID) throws -> String {
         try string(device, kAudioDevicePropertyDeviceUID)
     }
