@@ -48,7 +48,7 @@ enum AudioProcessMonitor {
     private static func owningApp(pid: pid_t, bundleID: String) -> (id: String, name: String, path: String?)? {
         // macOS plays every app's notification sound (and UI alerts) itself, so they can only be controlled together.
         if bundleID == alertsID {
-            return (alertsID, "Notifications & alerts", "/System/Library/CoreServices/NotificationCenter.app")
+            return (alertsID, "Notifications & alerts", nil)
         }
         // Safari and other WebKit views play media from a shared system GPU process outside any .app.
         if bundleID.hasPrefix(webKitID) {

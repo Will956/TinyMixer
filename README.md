@@ -18,4 +18,4 @@ On first use macOS asks for **System Audio Recording** permission: it is needed 
 
 For each app set below 100%, TinyMixer creates a Core Audio process tap that mutes the app's own output and plays the tapped audio back at the chosen volume. Apps at 100% are left untouched, volumes are remembered per app, and if TinyMixer quits every app's sound goes back to normal.
 
-Notification sounds (Slack's included) are played by macOS itself rather than by each app, so they share a single **Notifications & alerts** row.
+Notification sounds (Slack's included) are played by macOS itself rather than by each app, so they share a single **Notifications & alerts** row. The menu shows that row plus the apps currently playing sound.

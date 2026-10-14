@@ -7,14 +7,16 @@ struct MixerView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("App volumes").font(.headline)
 
-            if model.apps.isEmpty {
-                Text("No app is using audio right now.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            } else if model.apps.count > 8 {
+            if model.visibleApps.count > 8 {
                 ScrollView { rows.padding(.trailing, 8) }.frame(height: 400)
             } else {
                 rows
+            }
+
+            if !model.visibleApps.contains(where: { $0.id != AudioProcessMonitor.alertsID }) {
+                Text("No app is playing sound right now.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
 
             if let error = model.lastError {
@@ -49,7 +51,7 @@ struct MixerView: View {
 
     private var rows: some View {
         VStack(spacing: 10) {
-            ForEach(model.apps) { app in
+            ForEach(model.visibleApps) { app in
                 AppVolumeRow(app: app, model: model)
             }
         }
@@ -67,6 +69,8 @@ private struct AppVolumeRow: View {
         HStack(spacing: 10) {
             Image(nsImage: model.icon(for: app))
                 .resizable()
+                .scaledToFit()
+                .foregroundStyle(.secondary)
                 .frame(width: 26, height: 26)
 
             VStack(alignment: .leading, spacing: 2) {

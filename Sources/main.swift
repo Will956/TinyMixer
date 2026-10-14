@@ -35,16 +35,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if popover.isShown {
             popover.performClose(nil)
         } else {
-            model.refresh()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             NSApp.activate()
             popover.contentViewController?.view.window?.makeKey()
         }
     }
 
-    func popoverWillShow(_ notification: Notification) { model.setLivePolling(true) }
+    func popoverWillShow(_ notification: Notification) { model.setMenuOpen(true) }
 
-    func popoverDidClose(_ notification: Notification) { model.setLivePolling(false) }
+    func popoverDidClose(_ notification: Notification) { model.setMenuOpen(false) }
 }
 
 let application = NSApplication.shared

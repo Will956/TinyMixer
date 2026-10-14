@@ -3,14 +3,20 @@ import CoreAudio
 import ServiceManagement
 
 final class MixerModel: ObservableObject {
-    @Published private(set) var apps: [AudioApp] = []
+    /// Notifications & alerts first, then apps currently playing sound.
+    @Published private(set) var visibleApps: [AudioApp] = []
     @Published private(set) var volumes: [String: Double]
     @Published private(set) var muted: Set<String>
     @Published private(set) var lastError: String?
 
+    /// Every app with an audio process, playing or not, so saved volumes apply as soon as it starts playing.
+    private var apps: [AudioApp] = []
     private var taps: [String: AppTap] = [:]
     private var icons: [String: NSImage] = [:]
     private var pollTimer: Timer?
+    private var isMenuOpen = false
+    // Rows stay put until the menu closes, so a pause in playback doesn't pull a slider from under the cursor.
+    private var shownWhileOpen: Set<String> = []
     private let defaults = UserDefaults.standard
 
     init() {
@@ -44,16 +50,29 @@ final class MixerModel: ObservableObject {
     }
 
     func refresh() {
-        let current = AudioProcessMonitor.currentApps()
-        if current != apps { apps = current }
+        apps = AudioProcessMonitor.currentApps()
+        updateVisibleApps()
         syncTaps()
     }
 
-    /// Only needed to update the "playing" indicators while the menu is open.
-    func setLivePolling(_ enabled: Bool) {
+    /// Polls while open since playback starting or stopping doesn't change the process list.
+    func setMenuOpen(_ open: Bool) {
+        isMenuOpen = open
+        shownWhileOpen = []
         pollTimer?.invalidate()
-        pollTimer = enabled ? Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refresh() } : nil
+        pollTimer = open ? Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refresh() } : nil
+        if open { refresh() }
     }
+
+    private func updateVisibleApps() {
+        let visible = apps
+            .filter { $0.id == AudioProcessMonitor.alertsID || $0.isPlaying || shownWhileOpen.contains($0.id) }
+            .sorted { (sortRank($0), $0.name.lowercased()) < (sortRank($1), $1.name.lowercased()) }
+        if isMenuOpen { shownWhileOpen.formUnion(visible.map(\.id)) }
+        if visible != visibleApps { visibleApps = visible }
+    }
+
+    private func sortRank(_ app: AudioApp) -> Int { app.id == AudioProcessMonitor.alertsID ? 0 : 1 }
 
     func stopAll() {
         taps.removeAll()
@@ -62,7 +81,7 @@ final class MixerModel: ObservableObject {
     func icon(for app: AudioApp) -> NSImage {
         if let icon = icons[app.id] { return icon }
         let icon = app.bundlePath.map { NSWorkspace.shared.icon(forFile: $0) }
-            ?? NSImage(systemSymbolName: "app", accessibilityDescription: nil)!
+            ?? NSImage(systemSymbolName: app.id == AudioProcessMonitor.alertsID ? "bell.fill" : "app", accessibilityDescription: nil)!
         icons[app.id] = icon
         return icon
     }
