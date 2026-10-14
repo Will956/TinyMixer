@@ -2,7 +2,7 @@
 
 A tiny macOS menu bar app to set the volume of each app separately, without touching the system volume.
 
-<img src="docs/screenshot.png" width="320" alt="TinyMixer menu">
+<img src="docs/menu.png" width="320" alt="TinyMixer menu">
 
 ## Features
 
