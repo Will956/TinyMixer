@@ -12,6 +12,7 @@ struct AudioApp: Identifiable, Equatable {
 
 enum AudioProcessMonitor {
     static let alertsID = "systemsoundserverd"
+    private static let alertsName = "Notifications & alerts"
     private static let webKitID = "com.apple.WebKit"
 
     static func currentApps() -> [AudioApp] {
@@ -38,6 +39,11 @@ enum AudioProcessMonitor {
             }
         }
 
+        // The system sound service only runs while playing a sound, but its row must stay reachable.
+        if appsByID[alertsID] == nil {
+            appsByID[alertsID] = AudioApp(id: alertsID, name: alertsName, bundlePath: nil, processObjectIDs: [], isPlaying: false)
+        }
+
         return appsByID.values
             .map { app in var app = app; app.processObjectIDs.sort(); return app }
             .sorted { ($0.isPlaying ? 0 : 1, $0.name.lowercased()) < ($1.isPlaying ? 0 : 1, $1.name.lowercased()) }
@@ -48,7 +54,7 @@ enum AudioProcessMonitor {
     private static func owningApp(pid: pid_t, bundleID: String) -> (id: String, name: String, path: String?)? {
         // macOS plays every app's notification sound (and UI alerts) itself, so they can only be controlled together.
         if bundleID == alertsID {
-            return (alertsID, "Notifications & alerts", nil)
+            return (alertsID, alertsName, nil)
         }
         // Safari and other WebKit views play media from a shared system GPU process outside any .app.
         if bundleID.hasPrefix(webKitID) {

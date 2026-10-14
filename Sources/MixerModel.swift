@@ -120,16 +120,21 @@ final class MixerModel: ObservableObject {
             wanted.insert(app.id)
 
             let device = app.id == AudioProcessMonitor.alertsID ? alertOutput : output
-            guard let deviceUID = try? CA.deviceUID(device) else { continue }
+            let target = tapTarget(for: app)
+            guard let deviceUID = try? CA.deviceUID(device), !(target.processes.isEmpty && target.bundleIDs.isEmpty) else { continue }
 
-            if let tap = taps[app.id], tap.processObjectIDs == app.processObjectIDs, tap.outputDeviceUID == deviceUID {
+            if let tap = taps[app.id], tap.processObjectIDs == target.processes, tap.bundleIDs == target.bundleIDs,
+               tap.outputDeviceUID == deviceUID {
                 tap.gain = gain
                 continue
             }
             // Release the previous tap first so the same processes are never tapped twice.
             taps[app.id] = nil
             do {
-                taps[app.id] = try AppTap(name: app.name, processObjectIDs: app.processObjectIDs, outputDevice: device, gain: gain)
+                taps[app.id] = try AppTap(
+                    name: app.name, processObjectIDs: target.processes, bundleIDs: target.bundleIDs,
+                    outputDevice: device, gain: gain
+                )
                 if lastError?.hasPrefix(app.name) == true { lastError = nil }
             } catch {
                 lastError = "\(app.name): \(error)"
@@ -140,6 +145,15 @@ final class MixerModel: ObservableObject {
         for id in Array(taps.keys) where !wanted.contains(id) {
             taps[id] = nil
         }
+    }
+
+    /// The system sound service quits when idle; tapping it by bundle ID with restore keeps the very first
+    /// notification after a quiet period under control, instead of re-tapping after it already started playing.
+    private func tapTarget(for app: AudioApp) -> (processes: [AudioObjectID], bundleIDs: [String]) {
+        if app.id == AudioProcessMonitor.alertsID, #available(macOS 26.0, *) {
+            return ([], [app.id])
+        }
+        return (app.processObjectIDs, [])
     }
 
     private func listen(_ selector: AudioObjectPropertySelector, _ handler: @escaping () -> Void) {

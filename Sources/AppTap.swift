@@ -20,8 +20,12 @@ final class AppTap {
         set { targetGain.pointee = max(0, min(1, newValue)) }
     }
 
-    init(name: String, processObjectIDs: [AudioObjectID], outputDevice: AudioDeviceID, gain: Float) throws {
+    let bundleIDs: [String]
+
+    /// `bundleIDs` (macOS 26+) keeps the tap attached across restarts of those processes.
+    init(name: String, processObjectIDs: [AudioObjectID], bundleIDs: [String] = [], outputDevice: AudioDeviceID, gain: Float) throws {
         self.processObjectIDs = processObjectIDs
+        self.bundleIDs = bundleIDs
         self.outputDeviceUID = try CA.deviceUID(outputDevice)
         targetGain.pointee = gain
         currentGain.pointee = gain
@@ -47,6 +51,10 @@ final class AppTap {
         description.isPrivate = true
         // Muting only while tapped means the app's sound comes back on its own if TinyMixer stops or crashes.
         description.muteBehavior = .mutedWhenTapped
+        if #available(macOS 26.0, *), !bundleIDs.isEmpty {
+            description.bundleIDs = bundleIDs
+            description.isProcessRestoreEnabled = true
+        }
         try check(AudioHardwareCreateProcessTap(description, &tapID), "Create process tap")
 
         let aggregate: [String: Any] = [
